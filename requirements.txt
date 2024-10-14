@@ -1,0 +1,11 @@
+streamlit==1.22.0
+google-cloud-storage==2.8.0
+google-auth==2.18.0
+vertexai==0.0.1
+pandas==1.5.3
+numpy==1.23.5
+scikit-learn==1.2.2
+plotly==5.14.1
+Pillow==9.5.0
+requests==2.30.0
+

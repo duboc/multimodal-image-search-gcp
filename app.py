@@ -95,44 +95,7 @@ def search(df: pd.DataFrame, image_uri: str=None, query_text: str=None) -> pd.Da
         return pd.DataFrame()
     
     df['similarity'] = df['vectors'].apply(lambda x: cosine_similarity(query_embedding, np.array(x).reshape(1, -1))[0][0])
-    df = df.sort_values(by='similarity', ascending=False).head(10)  # Increase to top 10 results
-    
-    storage_client = storage.Client()
-    
-    st.write("### Search Results")
-    
-    # Create a 2-column layout
-    col1, col2 = st.columns(2)
-    
-    for index, row in df.iterrows():
-        with col1 if index % 2 == 0 else col2:
-            st.write(f"**{row['title']}**")
-            try:
-                # Parse the GCS URI
-                gcs_uri = row['image']
-                bucket_name = gcs_uri.split('/')[2]
-                blob_name = '/'.join(gcs_uri.split('/')[3:])
-                
-                # Get the blob
-                bucket = storage_client.bucket(bucket_name)
-                blob = bucket.blob(blob_name)
-                
-                # Download the image content
-                image_content = blob.download_as_bytes()
-                
-                # Open and resize the image
-                img = PILImage.open(io.BytesIO(image_content))
-                img.thumbnail((200, 200))  # Resize to thumbnail
-                
-                # Display the image
-                st.image(img, use_column_width=True)
-                
-                # Display similarity score
-                st.write(f"Similarity: {row['similarity']:.4f}")
-                
-                st.write("---")  # Add a separator between results
-            except Exception as e:
-                st.error(f"Error loading image {row['image']}: {str(e)}")
+    df = df.sort_values(by='similarity', ascending=False).head(20)  # Increase to top 20 results
     
     return df
 
@@ -211,6 +174,8 @@ def search_tab():
                 search_results = search(df, query_text=query_text)
             if search_results.empty:
                 st.warning("No valid search results found.")
+            else:
+                display_search_results(search_results)
 
     st.subheader("Image-to-Image Search")
     image_uri = st.selectbox("Select an image for similarity search:", df['image'].tolist())
@@ -220,6 +185,46 @@ def search_tab():
                 search_results = search(df, image_uri=image_uri)
             if search_results.empty:
                 st.warning("No valid similar images found.")
+
+def display_search_results(df):
+    st.write("### Search Results")
+    
+    # Display top 6 images as thumbnails in the first row
+    st.write("Top Results:")
+    cols = st.columns(6)
+    for index, (_, row) in enumerate(df.head(6).iterrows()):
+        with cols[index]:
+            display_thumbnail(row)
+    
+    # Display detailed results
+    st.write("Detailed Results:")
+    for index, row in df.iterrows():
+        with st.container():
+            col1, col2 = st.columns([1, 3])
+            with col1:
+                display_thumbnail(row, size=(150, 150))
+            with col2:
+                st.write(f"**{row['title']}**")
+                st.write(f"Similarity: {row['similarity']:.4f}")
+                st.write("---")
+
+def display_thumbnail(row, size=(100, 100)):
+    try:
+        gcs_uri = row['image']
+        bucket_name = gcs_uri.split('/')[2]
+        blob_name = '/'.join(gcs_uri.split('/')[3:])
+        
+        storage_client = storage.Client()
+        bucket = storage_client.bucket(bucket_name)
+        blob = bucket.blob(blob_name)
+        
+        image_content = blob.download_as_bytes()
+        img = PILImage.open(io.BytesIO(image_content))
+        img.thumbnail(size)
+        
+        st.image(img, use_column_width=True)
+    except Exception as e:
+        st.error(f"Error loading image: {str(e)}")
 
 def main():
     st.title("GCS Image Uploader, Embedder, and Search")

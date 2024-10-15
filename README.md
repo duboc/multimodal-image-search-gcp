@@ -91,3 +91,9 @@ Contributions are welcome! Please feel free to submit a Pull Request.
 ## License
 
 This project is licensed under the MIT License - see the LICENSE file for details.
+
+## Demo
+
+Here's a quick demonstration of how the app works:
+
+![App Demo](./screen.gif)
